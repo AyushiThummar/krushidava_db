@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "457703051615",
+    "project_id": "krushidava-db",
+    "storage_bucket": "krushidava-db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:457703051615:android:ea8d2e0498d30d5b02e6ea",
+        "android_client_info": {
+          "package_name": "com.example.krushidava"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVM9fhw395o_g02N0XITL0Si5RHw9YBtA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
