@@ -1,7 +1,9 @@
-// ignore_for_file: use_key_in_widget_constructors
+// // ignore_for_file: use_key_in_widget_constructors
 
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'shopkeeper_dashboard.dart';
 import 'shopkeeper_details.dart';
 import 'delete_product.dart';
@@ -10,23 +12,7 @@ import 'view_product.dart';
 import 'product_management.dart';
 
 class ManageProducts extends StatelessWidget {
-  final List<Map<String, String>> products = [
-    {
-      'name': 'Liquid RAMBO-50',
-      'desc': '(CHLORPYRIFOS 50% EC)',
-      'image': 'assets/images/pesticide1.png',
-    },
-    {
-      'name': 'TOLFENPYRAD 15 EC',
-      'desc': 'INSECTICIDE, 500',
-      'image': 'assets/images/pesticide2.png',
-    },
-    {
-      'name': 'LIQUID BIO AGRICULTURAL',
-      'desc': 'PESTICIDES SPG',
-      'image': 'assets/images/pesticide3.png',
-    },
-  ];
+  const ManageProducts({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +42,7 @@ class ManageProducts extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
-                        shadows: [
+                        shadows: const [
                           BoxShadow(
                             color: Color(0x3F000000),
                             blurRadius: 4,
@@ -64,14 +50,14 @@ class ManageProducts extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(Icons.arrow_back, color: Colors.black),
+                      child: const Icon(Icons.arrow_back, color: Colors.black),
                     ),
                   ),
 
-                  Spacer(flex: 1),
+                  const Spacer(flex: 1),
 
                   // Centered title
-                  Text(
+                  const Text(
                     'Manage Products',
                     style: TextStyle(
                       color: Color(0xFF064E3C),
@@ -81,7 +67,7 @@ class ManageProducts extends StatelessWidget {
                     ),
                   ),
 
-                  Spacer(flex: 1),
+                  const Spacer(flex: 1),
 
                   // Profile icon
                   GestureDetector(
@@ -95,13 +81,11 @@ class ManageProducts extends StatelessWidget {
                           ),
                         );
                       } else {
-                        // User is not logged in, show a message or redirect
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('User not logged in')),
                         );
                       }
                     },
-
                     child: const Icon(
                       Icons.person_outline,
                       size: 30,
@@ -110,215 +94,277 @@ class ManageProducts extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              // Products List
-              Column(
-                children: products.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  Map<String, String> product = entry.value;
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: ShapeDecoration(
-                        color: Color(0xFF064E3C),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+              // Stream of products from Firestore
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('products')
+                    .orderBy('date', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) {
+                    return Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        const Text(
+                          'No products yet.',
+                          style: TextStyle(fontSize: 16),
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          // Image and Name Row
-                          Row(
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                margin: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
+                        const SizedBox(height: 20),
+                        _buildAddButton(context),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      // Product cards (preserve your UI)
+                      Column(
+                        children: docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final imagePath = data['imagePath'] as String?;
+                          final name = data['name'] ?? '';
+                          final desc = data['technicalName'] ?? '';
+
+                          final imageFile =
+                              (imagePath != null && imagePath.isNotEmpty)
+                              ? File(imagePath)
+                              : null;
+                          final exists =
+                              imageFile != null && imageFile.existsSync();
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Container(
+                              width: double.infinity,
+                              decoration: ShapeDecoration(
+                                color: const Color(0xFF064E3C),
+                                shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  image: DecorationImage(
-                                    image: AssetImage(product['image']!),
-                                    fit: BoxFit.cover,
-                                  ),
                                 ),
                               ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product['name']!,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Poppins',
+                              child: Column(
+                                children: [
+                                  // Image and Name Row
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        margin: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          image: exists
+                                              ? DecorationImage(
+                                                  image: FileImage(imageFile),
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : null,
+                                        ),
+                                        child: !exists
+                                            ? Image.asset(
+                                                'assets/images/pesticide_placeholder.png',
+                                                fit: BoxFit.cover,
+                                              )
+                                            : null,
                                       ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      product['desc']!,
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                        fontFamily: 'Poppins',
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              name,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Poppins',
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              desc,
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 14,
+                                                fontFamily: 'Poppins',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                    ],
+                                  ),
+
+                                  // Buttons Row
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 8,
                                     ),
-                                  ],
-                                ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        // Delete button -> open DeleteProduct with doc id
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.grey[300],
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => DeleteProduct(
+                                                  productId: doc.id,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            color: Color(0xFF064E3C),
+                                          ),
+                                          label: const Text(
+                                            'Delete',
+                                            style: TextStyle(
+                                              color: Color(0xFF064E3C),
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Edit button -> open EditProduct with doc id
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.grey[300],
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => EditProduct(
+                                                  productId: doc.id,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Color(0xFF064E3C),
+                                          ),
+                                          label: const Text(
+                                            'Edit',
+                                            style: TextStyle(
+                                              color: Color(0xFF064E3C),
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+
+                                        // View button -> open ViewProduct with doc id
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.grey[300],
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => ViewProduct(
+                                                  productId: doc.id,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.visibility,
+                                            color: Color(0xFF064E3C),
+                                          ),
+                                          label: const Text(
+                                            'View',
+                                            style: TextStyle(
+                                              color: Color(0xFF064E3C),
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-
-                          // Buttons Row
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                // Delete button
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[300],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: index == 0
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => DeleteProduct(),
-                                            ),
-                                          );
-                                        }
-                                      : () {}, // do nothing for other products
-                                  icon: Icon(
-                                    Icons.delete,
-                                    color: Color(0xFF064E3C),
-                                  ),
-                                  label: Text(
-                                    'Delete',
-                                    style: TextStyle(
-                                      color: Color(0xFF064E3C),
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-
-                                // Edit button
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[300],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: index == 0
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => EditProduct(),
-                                            ),
-                                          );
-                                        }
-                                      : () {}, // do nothing for others
-                                  icon: Icon(
-                                    Icons.edit,
-                                    color: Color(0xFF064E3C),
-                                  ),
-                                  label: Text(
-                                    'Edit',
-                                    style: TextStyle(
-                                      color: Color(0xFF064E3C),
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-
-                                // View button
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[300],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: index == 0
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => ViewProduct(),
-                                            ),
-                                          );
-                                        }
-                                      : () {}, // do nothing for others
-                                  icon: Icon(
-                                    Icons.visibility,
-                                    color: Color(0xFF064E3C),
-                                  ),
-                                  label: Text(
-                                    'View',
-                                    style: TextStyle(
-                                      color: Color(0xFF064E3C),
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          );
+                        }).toList(),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
 
-              SizedBox(height: 20),
-              // Add New Product Button
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ProductManagement()),
+                      const SizedBox(height: 20),
+                      // Add New Product Button
+                      _buildAddButton(context),
+                      const SizedBox(height: 30),
+                    ],
                   );
                 },
-                child: Container(
-                  width: 197,
-                  height: 55,
-                  decoration: ShapeDecoration(
-                    color: Color(0xFF064E3C),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Add a new product',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
               ),
-              SizedBox(height: 30),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProductManagement()),
+        );
+      },
+      child: Container(
+        width: 197,
+        height: 55,
+        decoration: ShapeDecoration(
+          color: const Color(0xFF064E3C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          'Add a new product',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

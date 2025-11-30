@@ -1,219 +1,230 @@
-// ignore_for_file: use_key_in_widget_constructors, avoid_unnecessary_containers
+// ignore_for_file: use_key_in_widget_constructors, avoid_unnecessary_containers, use_build_context_synchronously
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:krushidava/home.dart';
 
-class ProfilePage extends StatelessWidget {
-  final TextEditingController addressController = TextEditingController(
-    text: "--------------------",
-  );
+class ProfilePage extends StatefulWidget {
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final TextEditingController addressController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users') // your farmers/users collection
+            .doc(currentUser!.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF064E3C)),
+            );
+          }
+
+          if (!snapshot.data!.exists) {
+            return const Center(child: Text("Data not found for this user"));
+          }
+
+          final userData = snapshot.data!.data() as Map<String, dynamic>;
+
+          addressController.text = userData['address'] ?? "";
+
+          return SingleChildScrollView(
+            child: Column(
               children: [
-                // Green header with centered title
-                Container(
-                  width: double.infinity,
-                  height: 260,
-                  color: const Color(0xFF008575),
-                  child: Center(
-                    child: Text(
-                      'Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'Poppins',
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Green header
+                    Container(
+                      width: double.infinity,
+                      height: 260,
+                      color: const Color(0xFF008575),
+                      child: const Center(
+                        child: Text(
+                          'Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                // Back button → HomePage
-                Positioned(
-                  left: 25,
-                  top: 45,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => HomePage()),
-                      );
-                    },
-                    child: Container(
-                      width: 45,
-                      height: 35,
-                      decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+
+                    // Back Button
+                    Positioned(
+                      left: 25,
+                      top: 45,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => HomePage()),
+                          );
+                        },
+                        child: Container(
+                          width: 45,
+                          height: 35,
+                          decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            shadows: const [
+                              BoxShadow(
+                                color: Color(0x3F000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.arrow_back, color: Colors.black),
+                          ),
                         ),
-                        shadows: const [
-                          BoxShadow(
-                            color: Color(0x3F000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 4),
+                      ),
+                    ),
+
+                    // Profile Image
+                    Positioned(
+                      top: 200,
+                      left: screenWidth / 2 - 50,
+                      child: Stack(
+                        children: const [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.white,
+                            child: CircleAvatar(
+                              radius: 45,
+                              backgroundImage: AssetImage(
+                                "assets/images/profile.png",
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(Icons.arrow_back, color: Colors.black),
-                      ),
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 60),
+
+                // Dynamic Name
+                Text(
+                  userData['name'] ?? "",
+                  style: const TextStyle(
+                    color: Color(0xFF064E3C),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Poppins',
                   ),
                 ),
 
-                // User profile image
-                Positioned(
-                  top: 200,
-                  left: screenWidth / 2 - 50,
-                  child: Stack(
+                const SizedBox(height: 30),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        child: CircleAvatar(
-                          radius: 45,
-                          backgroundImage: AssetImage(
-                            "assets/images/profile.png",
+                      buildStyledField("Mobile Number", userData['phone']),
+                      const SizedBox(height: 25),
+                      buildStyledField("Email", userData['email']),
+                      const SizedBox(height: 25),
+
+                      // Editable Address
+                      buildStyledField(
+                        "Address",
+                        userData['address'],
+                        isEditable: true,
+                        showEdit: true,
+                        controller: addressController,
+                      ),
+                      const SizedBox(height: 50),
+
+                      // Update Profile Button
+                      GestureDetector(
+                        onTap: () async {
+                          await FirebaseFirestore.instance
+                              .collection("users")
+                              .doc(currentUser.uid)
+                              .update({
+                                "address": addressController.text.trim(),
+                              });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Profile Updated Successfully"),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 200,
+                          height: 50,
+                          decoration: ShapeDecoration(
+                            color: const Color(0xFF064E3C),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Update Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: const Color(0xFF18B5A3),
-                          child: Icon(
-                            Icons.camera_alt,
-                            size: 14,
-                            color: Colors.white,
-                          ),
+
+                      const SizedBox(height: 30),
+
+                      // Logout Button
+                      InkWell(
+                        onTap: () async {
+                          await FirebaseAuth.instance.signOut();
+                          Navigator.pushReplacementNamed(context, '/login');
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.logout, color: Colors.black, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
               ],
             ),
-
-            SizedBox(height: 60),
-
-            // Person name
-            Text(
-              'Person name',
-              style: TextStyle(
-                color: const Color(0xFF064E3C),
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Poppins',
-              ),
-            ),
-
-            SizedBox(height: 30),
-
-            // Fields
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0),
-              child: Column(
-                children: [
-                  buildStyledField("Mobile Number", "+91 XXXXX XXXXX"),
-                  SizedBox(height: 25),
-                  buildStyledField("Email", "xyz111@gmail.com"),
-                  SizedBox(height: 25),
-                  buildStyledField(
-                    "Address",
-                    "",
-                    isEditable: true,
-                    showEdit: true,
-                    controller: addressController,
-                  ),
-                  SizedBox(height: 50),
-
-                  // Update Profile button → HomePage
-                  Container(
-                    width: 200,
-                    height: 50,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFF064E3C),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      shadows: [
-                        BoxShadow(
-                          color: Color(0x3F000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(25),
-                        onTap: () {
-                          Navigator.pushReplacementNamed(context, '/home');
-                        },
-                        child: Center(
-                          child: Text(
-                            'Update Profile',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 30),
-
-                  // Logout button → LoginPage
-                  InkWell(
-                    onTap: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.logout, color: Colors.black, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Logout',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -247,7 +258,6 @@ class ProfilePage extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Editable text field
               Expanded(
                 child: isEditable
                     ? TextField(

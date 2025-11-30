@@ -249,7 +249,7 @@
 //     );
 //   }
 // }
-// ignore_for_file: use_key_in_widget_constructors, avoid_print
+// ignore_for_file: use_key_in_widget_constructors, avoid_print, use_build_context_synchronously
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -387,52 +387,85 @@ class Register extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                     onPressed: () async {
-  String email = emailController.text.trim();
-  String password = passwordController.text.trim();
+                          onPressed: () async {
+                            String email = emailController.text.trim();
+                            String password = passwordController.text.trim();
 
-  if (email.isEmpty || password.isEmpty) {
-    _showSnack(context, "Please enter Email and Password", true);
-    return;
-  }
+                            if (email.isEmpty || password.isEmpty) {
+                              _showSnack(
+                                context,
+                                "Please enter Email and Password",
+                                true,
+                              );
+                              return;
+                            }
 
-  try {
-    // Login with Firebase
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
+                            try {
+                              // Login with Firebase
+                              UserCredential userCredential = await FirebaseAuth
+                                  .instance
+                                  .signInWithEmailAndPassword(
+                                    email: email,
+                                    password: password,
+                                  );
 
-    // Get user data from Firestore
-    DocumentSnapshot doc = await FirebaseFirestore.instance
-        .collection('users') // Single collection for all users
-        .doc(userCredential.user!.uid)
-        .get();
+                              // Get user data from Firestore
+                              DocumentSnapshot doc = await FirebaseFirestore
+                                  .instance
+                                  .collection(
+                                    'users',
+                                  ) // Single collection for all users
+                                  .doc(userCredential.user!.uid)
+                                  .get();
 
-    if (!doc.exists) {
-      _showSnack(context, "User data not found", true);
-      return;
-    }
+                              if (!doc.exists) {
+                                _showSnack(
+                                  context,
+                                  "User data not found",
+                                  true,
+                                );
+                                return;
+                              }
 
-    String userType = doc.get('userType'); // 'farmer' or 'shopkeeper'
+                              String userType = doc.get(
+                                'userType',
+                              ); // 'farmer' or 'shopkeeper'
 
-    if (userType == 'farmer') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-      _showSnack(context, "Farmer login successful", false);
-    } else if (userType == 'shopkeeper') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => Dashboard()),
-      );
-      _showSnack(context, "Shopkeeper login successful", false);
-    } else {
-      _showSnack(context, "Unknown user type", true);
-    }
-  } on FirebaseAuthException catch (e) {
-    _showSnack(context, e.message ?? "Login failed", true);
-  }
-},
+                              if (userType == 'farmer') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomePage(),
+                                  ),
+                                );
+                                _showSnack(
+                                  context,
+                                  "Farmer login successful",
+                                  false,
+                                );
+                              } else if (userType == 'shopkeeper') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Dashboard(),
+                                  ),
+                                );
+                                _showSnack(
+                                  context,
+                                  "Shopkeeper login successful",
+                                  false,
+                                );
+                              } else {
+                                _showSnack(context, "Unknown user type", true);
+                              }
+                            } on FirebaseAuthException catch (e) {
+                              _showSnack(
+                                context,
+                                e.message ?? "Login failed",
+                                true,
+                              );
+                            }
+                          },
                           child: Text(
                             'Get Started',
                             style: TextStyle(

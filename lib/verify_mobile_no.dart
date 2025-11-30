@@ -160,6 +160,8 @@
 //               ),
 //             ),
 
+// ignore_for_file: use_build_context_synchronously
+
 //             const SizedBox(height: 16),
 //             TextButton(
 //               onPressed: () {
@@ -216,8 +218,10 @@ class VerifyMobileNo extends StatefulWidget {
 }
 
 class _VerifyMobileNoState extends State<VerifyMobileNo> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   String? _verificationId;
@@ -299,8 +303,9 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -311,19 +316,20 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
     }
     await _startPhoneVerification();
     _startTimer();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('OTP resent')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('OTP resent')));
   }
 
   // ---------- After we have a PhoneAuthCredential ----------
   Future<void> _completeRegistrationWithCredential(
-      PhoneAuthCredential phoneCredential) async {
+    PhoneAuthCredential phoneCredential,
+  ) async {
     setState(() => _isLoading = true);
     final auth = FirebaseAuth.instance;
     try {
       // Try to create email user
-      UserCredential created =
-          await auth.createUserWithEmailAndPassword(
+      UserCredential created = await auth.createUserWithEmailAndPassword(
         email: widget.email,
         password: widget.password,
       );
@@ -362,7 +368,9 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
       // Registration complete -> go to login screen
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful. Please login.')),
+          const SnackBar(
+            content: Text('Registration successful. Please login.'),
+          ),
         );
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => Register()),
@@ -381,7 +389,9 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
 
           // Update user doc if exists or create if not
           final uid = signedIn.user!.uid;
-          final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+          final userDoc = FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid);
           final data = {
             'name': widget.name,
             'email': widget.email,
@@ -399,7 +409,11 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Phone linked to existing account. Please login.')),
+              const SnackBar(
+                content: Text(
+                  'Phone linked to existing account. Please login.',
+                ),
+              ),
             );
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => Register()),
@@ -412,12 +426,14 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
           );
         }
       } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Auth error: ${e.message}')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Auth error: ${e.message}')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -427,13 +443,15 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
   Future<void> _submitOtp() async {
     final code = otp;
     if (code.length != _controllers.length) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Please enter full OTP')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter full OTP')));
       return;
     }
     if (_verificationId == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No verification id. Try resend.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No verification id. Try resend.')),
+      );
       return;
     }
 
@@ -445,8 +463,9 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
       );
       await _completeRegistrationWithCredential(credential);
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('OTP verify failed: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('OTP verify failed: ${e.toString()}')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -460,7 +479,9 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
         : widget.phone;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(
@@ -472,11 +493,25 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 4),
-            Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2.5))),
+            Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
             const SizedBox(height: 20),
-            const Text('Verify OTP', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Verify OTP',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
-            Text('We have sent a ${_controllers.length}-digit OTP to +91$masked', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.black54)),
+            Text(
+              'We have sent a ${_controllers.length}-digit OTP to +91$masked',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.black54),
+            ),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -490,8 +525,18 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     maxLength: 1,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(counterText: '', filled: true, fillColor: const Color(0xFFF9F6F6), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      filled: true,
+                      fillColor: const Color(0xFFF9F6F6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     onChanged: (v) => _onChanged(v, i),
                   ),
                 );
@@ -505,14 +550,30 @@ class _VerifyMobileNoState extends State<VerifyMobileNo> {
               height: 48,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitOtp,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF064E3C), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                child: const Text('Complete Registration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF064E3C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Complete Registration',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: _secondsLeft > 0 ? null : _resendOtp,
-              child: Text(_secondsLeft > 0 ? 'Resend OTP in $_secondsLeft s' : 'Resend OTP'),
+              child: Text(
+                _secondsLeft > 0
+                    ? 'Resend OTP in $_secondsLeft s'
+                    : 'Resend OTP',
+              ),
             ),
             const SizedBox(height: 8),
             TextButton(

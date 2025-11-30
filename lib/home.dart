@@ -1,17 +1,24 @@
+// ignore_for_file: use_key_in_widget_constructors
+
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:krushidava/farmer_profile.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:krushidava/product_details_farmer_dynamic.dart';
+import 'farmer_profile.dart';
 import 'side_menu_bar.dart';
 import 'announcement.dart';
 import 'wishlist.dart';
 import 'feedback.dart';
 import 'inquiry.dart';
-import 'product_details_farmer.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE1FCF9),
       drawer: Drawer(child: SideMenuBar(parentContext: context)),
@@ -48,7 +55,7 @@ class HomePage extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 1), // spacing between the two icons
+          const SizedBox(width: 1),
           IconButton(
             icon: const Icon(
               Icons.person_outline,
@@ -62,7 +69,7 @@ class HomePage extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 30), // space from the right edge
+          const SizedBox(width: 30),
         ],
       ),
       bottomNavigationBar: Padding(
@@ -83,7 +90,7 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const Wishlist()),
+                  MaterialPageRoute(builder: (_) => Wishlist()),
                 );
               },
             ),
@@ -96,7 +103,7 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FeedbackPage()),
+                  MaterialPageRoute(builder: (_) => FeedbackPage()),
                 );
               },
             ),
@@ -109,7 +116,7 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const Inquiry()),
+                  MaterialPageRoute(builder: (_) => Inquiry()),
                 );
               },
             ),
@@ -121,49 +128,81 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 20,
-              crossAxisSpacing: 20,
-              childAspectRatio: 0.65,
-              children: [
-                _buildProductCard(
-                  context,
-                  image: 'assets/images/pesticide1.png',
-                  title: '50% EC CHLORPYRIPHOS',
-                  subtitle: 'RAMBO-50',
-                  price: '₹ 1000/LITRE',
-                  liked: true,
-                  navigateToDetails: true,
-                ),
-                _buildProductCard(
-                  context,
-                  image: 'assets/images/pesticide2.png',
-                  title: 'UTTAM CHLOROPYRIPHOS',
-                  subtitle: '1.5% DP, POUCH & BEG',
-                  price: '₹ 40/',
-                  liked: true,
-                ),
-                _buildProductCard(
-                  context,
-                  image: 'assets/images/pesticide3.png',
-                  title: 'IMIDACLOPRID 30.5% SC',
-                  subtitle: 'CONFIDOR',
-                  price: '₹ 1200/LITRE',
-                  liked: false,
-                ),
-                _buildProductCard(
-                  context,
-                  image: 'assets/images/pesticide4.png',
-                  title: 'ACETAMIPRID 20% SP',
-                  subtitle: 'ACETA GOLD',
-                  price: '₹ 900/KG',
-                  liked: false,
-                ),
-              ],
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('products')
+                  .orderBy('date', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No products found"));
+                }
+
+                final products = snapshot.data!.docs;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: products.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                    mainAxisExtent: 330,
+                  ),
+                  itemBuilder: (context, index) {
+                    final doc = products[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final productId = doc.id;
+
+                    Widget productImage = Image.asset(
+                      'assets/images/pesticide1.png',
+                      fit: BoxFit.cover,
+                    );
+
+                    final imagePath = data['imagePath'] ?? '';
+                    if (imagePath.startsWith('http')) {
+                      productImage = Image.network(
+                        imagePath,
+                        fit: BoxFit.cover,
+                      );
+                    } else if (File(imagePath).existsSync()) {
+                      productImage = Image.file(
+                        File(imagePath),
+                        fit: BoxFit.cover,
+                      );
+                    }
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('wishlist')
+                          .where('userId', isEqualTo: userId)
+                          .where('productId', isEqualTo: productId)
+                          .snapshots(),
+                      builder: (context, wishlistSnapshot) {
+                        final isLiked =
+                            wishlistSnapshot.hasData &&
+                            wishlistSnapshot.data!.docs.isNotEmpty;
+
+                        return _buildProductCard(
+                          context,
+                          imageWidget: productImage,
+                          title: data['technicalName'] ?? '',
+                          subtitle: data['name'] ?? '',
+                          price: data['packagingSize'] ?? '',
+                          liked: isLiked,
+                          productData: data,
+                          productId: productId,
+                          userId: userId!,
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -171,111 +210,120 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // ---------------- PRODUCT CARD ----------------
   Widget _buildProductCard(
     BuildContext context, {
-    required String image,
+    required Widget imageWidget,
     required String title,
     required String subtitle,
     required String price,
     required bool liked,
-    bool navigateToDetails = false,
+    Map<String, dynamic>? productData,
+    String? productId,
+    String? userId,
   }) {
-    return Column(
-      children: [
-        Container(
-          width: 140,
-          height: 170,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            image: DecorationImage(image: AssetImage(image), fit: BoxFit.cover),
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 140,
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: "$title\n",
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 10,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w400,
-                    height: 1.5,
-                  ),
-                ),
-                TextSpan(
-                  text: "$subtitle ",
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 10,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w700,
-                    height: 1.5,
-                  ),
-                ),
-                TextSpan(
-                  text: price,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 10,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w400,
-                    height: 1.5,
-                  ),
-                ),
-              ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1 / 1.2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: imageWidget,
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () {
-                if (navigateToDetails) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ProductDetailsFarmer(),
-                    ),
-                  );
-                }
-              },
-              child: Container(
-                width: 80,
-                height: 20,
-                decoration: ShapeDecoration(
-                  color: const Color(0xFF008575),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11),
+          ),
+          Text(
+            price,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11),
+          ),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  if (productData != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductDetailsFarmerDynamic(
+                          productData: productData,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Read more',
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF008575),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    "Read more",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 10,
-                      fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 5),
-            Icon(
-              liked ? Icons.favorite : Icons.favorite_border,
-              color: const Color(0xFF064E3C),
-              size: 18,
-            ),
-          ],
-        ),
-      ],
+              GestureDetector(
+                onTap: () async {
+                  if (productId == null || userId == null) return;
+                  final wishlistRef = FirebaseFirestore.instance.collection(
+                    'wishlist',
+                  );
+                  final doc = await wishlistRef
+                      .where('userId', isEqualTo: userId)
+                      .where('productId', isEqualTo: productId)
+                      .get();
+
+                  if (doc.docs.isEmpty) {
+                    wishlistRef.add({
+                      'userId': userId,
+                      'productId': productId,
+                      'addedAt': FieldValue.serverTimestamp(),
+                    });
+                  } else {
+                    wishlistRef.doc(doc.docs.first.id).delete();
+                  }
+                },
+                child: Icon(
+                  liked ? Icons.favorite : Icons.favorite_border,
+                  color: const Color(0xFF064E3C),
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
