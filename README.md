@@ -81,7 +81,7 @@ This link is provided **only to showcase collaboration, branching strategy, and 
 
 - Flutter  
 - Dart  
-- Firebase / API integration (if applicable)  
+- Firebase  
 
 ---
 
