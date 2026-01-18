@@ -27,7 +27,7 @@ During the **initial phase of development**, an earlier repository was created w
 That earlier repository is shared below **only to showcase team collaboration, branching strategy, and contribution history**.
 
 👉 **Earlier / Initial Development Repository:**  
-https://github.com/USERNAME/OLDER_REPO_NAME
-
+[https://github.com/USERNAME/OLDER_REPO_NAME
+](https://github.com/Tanvi11010/krushi_dava)
 Note:  
 The final, stable, and complete implementation is present in **this repository**, while the linked repository reflects the **early-stage collaborative development work**.
